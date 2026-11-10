@@ -1,0 +1,75 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.manifest
+*.spec
+
+# ── Virtual environment ──────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# ── Django ───────────────────────────────────────────────────────────────────
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# ── Static files (collected) ─────────────────────────────────────────────────
+staticfiles/
+static_root/
+
+# ── Environment variables ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDE / Editor ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Testing & Coverage ───────────────────────────────────────────────────────
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+coverage.xml
+*.cover
+
+# ── mypy / type checking ─────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints
+
+# ── Node (if you ever add a JS build step) ───────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
