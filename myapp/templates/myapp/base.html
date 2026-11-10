@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}ChatApp{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0f1117;
+            --surface:   #1a1d2e;
+            --surface2:  #242740;
+            --border:    #2e3250;
+            --accent:    #6c63ff;
+            --accent2:   #48cfad;
+            --text:      #e2e8f0;
+            --muted:     #8892a4;
+            --danger:    #fc8181;
+            --radius:    14px;
+            --shadow:    0 8px 32px rgba(0,0,0,.45);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── NAV ── */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+        .nav-links { display: flex; align-items: center; gap: 1rem; }
+        .nav-links a, .nav-links button {
+            font-family: inherit;
+            font-size: .875rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: .4rem .9rem;
+            border-radius: 8px;
+            transition: color .2s, background .2s;
+        }
+        .nav-links a:hover, .nav-links button:hover {
+            color: var(--text);
+            background: var(--surface2);
+        }
+        .nav-links .btn-accent {
+            background: var(--accent);
+            color: #fff;
+        }
+        .nav-links .btn-accent:hover { background: #5a52d5; color: #fff; }
+
+        /* ── MAIN ── */
+        main { flex: 1; padding: 2rem 1rem; }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        /* ── BUTTONS ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .65rem 1.4rem;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: transform .15s, box-shadow .15s, background .2s;
+        }
+        .btn:active { transform: scale(.97); }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #5a52d5; box-shadow: 0 4px 20px rgba(108,99,255,.35); }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: var(--danger); color: #fff; }
+
+        /* ── FORM FIELD ── */
+        .field { display: flex; flex-direction: column; gap: .45rem; }
+        .field label { font-size: .85rem; font-weight: 600; color: var(--muted); }
+        .field input {
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: .95rem;
+            padding: .7rem 1rem;
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+        .field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(108,99,255,.18);
+        }
+
+        /* ── ALERTS ── */
+        .alert {
+            padding: .75rem 1.1rem;
+            border-radius: 10px;
+            font-size: .88rem;
+            font-weight: 500;
+            margin-bottom: 1.2rem;
+        }
+        .alert-error { background: rgba(252,129,129,.12); border: 1px solid rgba(252,129,129,.35); color: var(--danger); }
+        .alert-success { background: rgba(72,207,173,.12); border: 1px solid rgba(72,207,173,.35); color: var(--accent2); }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            box-shadow: var(--shadow);
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <a class="nav-brand" href="{% url 'index' %}">💬 ChatApp</a>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+                <span style="color:var(--muted); font-size:.85rem;">👤 {{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'register' %}" class="btn-accent">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</body>
+</html>
+

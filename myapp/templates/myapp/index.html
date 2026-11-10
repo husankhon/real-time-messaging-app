@@ -1,0 +1,186 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Rooms — ChatApp{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .page-header h1 span {
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ── ROOM GRID ── */
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .room-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        transition: border-color .2s, transform .2s, box-shadow .2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .room-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(108,99,255,.07), rgba(72,207,173,.04));
+        opacity: 0;
+        transition: opacity .2s;
+    }
+    .room-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 36px rgba(108,99,255,.22);
+    }
+    .room-card:hover::before { opacity: 1; }
+
+    .room-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .room-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .room-slug {
+        font-size: .78rem;
+        color: var(--muted);
+        font-family: monospace;
+    }
+    .room-arrow {
+        margin-top: auto;
+        color: var(--accent);
+        font-size: .85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1rem;
+        color: var(--muted);
+    }
+    .empty-state .emoji { font-size: 3.5rem; }
+    .empty-state h2 { font-size: 1.3rem; margin: 1rem 0 .5rem; color: var(--text); }
+    .empty-state p { font-size: .9rem; }
+
+    /* ── CREATE ROOM FORM ── */
+    .create-room-bar {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    .create-room-bar input {
+        flex: 1;
+        min-width: 200px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: .95rem;
+        padding: .65rem 1rem;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .create-room-bar input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(108,99,255,.18);
+    }
+    .create-room-bar input::placeholder { color: var(--muted); }
+
+    /* ── LOGIN PROMPT ── */
+    .login-prompt {
+        background: rgba(108,99,255,.08);
+        border: 1px solid rgba(108,99,255,.25);
+        border-radius: var(--radius);
+        padding: 1.2rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .login-prompt p { color: var(--muted); font-size: .9rem; }
+    .login-prompt strong { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Chat <span>Rooms</span></h1>
+</div>
+
+{% if user.is_authenticated %}
+<form method="post" action="{% url 'create_room' %}" class="create-room-bar">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="New room name…" maxlength="100" autocomplete="off" required />
+    <button type="submit" class="btn btn-primary">+ Create Room</button>
+</form>
+{% endif %}
+
+{% if not user.is_authenticated %}
+<div class="login-prompt">
+    <p><strong>Join the conversation!</strong> Login or create an account to send messages.</p>
+    <div style="display:flex;gap:.75rem;">
+        <a href="{% url 'login' %}" class="btn btn-outline">Login</a>
+        <a href="{% url 'register' %}" class="btn btn-primary">Register</a>
+    </div>
+</div>
+{% endif %}
+
+{% if chat_rooms %}
+    <div class="rooms-grid">
+        {% for room in chat_rooms %}
+        <a class="room-card" href="{% url 'chatroom' room.slug %}">
+            <div class="room-icon">💬</div>
+            <div class="room-name">{{ room.name }}</div>
+            <div class="room-slug">#{{ room.slug }}</div>
+            <div class="room-arrow">Join room →</div>
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="emoji">🏜️</div>
+        <h2>No rooms yet</h2>
+        <p>{% if user.is_authenticated %}Type a room name above to create the first one!{% else %}Login to create the first room.{% endif %}</p>
+    </div>
+{% endif %}
+{% endblock %}

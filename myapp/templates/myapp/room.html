@@ -1,0 +1,341 @@
+{% extends 'myapp/base.html' %}
+{% load tz %}
+{% block title %}{{ room.name }} — ChatApp{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ── LAYOUT ── */
+    .chat-layout {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: calc(100vh - 60px - 4rem);
+        max-width: 820px;
+        margin: 0 auto;
+    }
+
+    /* ── HEADER ── */
+    .chat-header {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius) var(--radius) 0 0;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .chat-header-left { display: flex; align-items: center; gap: .9rem; }
+    .room-avatar {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; flex-shrink: 0;
+    }
+    .room-info .room-title { font-size: 1.05rem; font-weight: 700; }
+    .room-info .room-sub   { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+    .status-dot {
+        display: inline-block;
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #68d391; margin-right: 5px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .back-link {
+        font-size: .8rem; color: var(--muted); text-decoration: none;
+        display: flex; align-items: center; gap: .3rem;
+        padding: .4rem .8rem; border-radius: 8px;
+        transition: color .2s, background .2s; flex-shrink: 0;
+    }
+    .back-link:hover { color: var(--text); background: var(--surface2); }
+
+    /* ── MESSAGES ── */
+    .chat-messages {
+        background: var(--bg);
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        padding: 1.25rem 1.5rem;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: .6rem;
+    }
+
+    /* ── SINGLE MESSAGE ── */
+    .msg-wrap { display: flex; gap: .75rem; align-items: flex-end; }
+    .msg-wrap.own { flex-direction: row-reverse; }
+    .msg-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        display: flex; align-items: center; justify-content: center;
+        font-size: .75rem; font-weight: 700; color: #fff;
+        flex-shrink: 0; margin-bottom: 2px;
+    }
+    .msg-wrap.own .msg-avatar { background: linear-gradient(135deg, var(--accent2), #38bdf8); }
+    .msg-bubble {
+        max-width: 68%; padding: .65rem 1rem;
+        border-radius: 16px 16px 16px 4px;
+        background: var(--surface); border: 1px solid var(--border);
+        font-size: .9rem; line-height: 1.5; word-break: break-word;
+    }
+    .msg-wrap.own .msg-bubble {
+        background: var(--accent); border-color: transparent;
+        border-radius: 16px 16px 4px 16px; color: #fff;
+    }
+    .msg-meta {
+        font-size: .7rem; color: var(--muted); margin-bottom: 2px;
+        display: flex; align-items: baseline; gap: .4rem;
+    }
+    .msg-wrap.own .msg-meta { flex-direction: row-reverse; }
+    .msg-username { font-weight: 600; }
+    .msg-time     { font-size: .68rem; }
+
+    /* day divider */
+    .day-divider {
+        text-align: center; font-size: .72rem; color: var(--muted);
+        position: relative; margin: .5rem 0;
+    }
+    .day-divider::before, .day-divider::after {
+        content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: var(--border);
+    }
+    .day-divider::before { left: 0; }
+    .day-divider::after  { right: 0; }
+
+    /* ── INPUT AREA ── */
+    .chat-input-area {
+        background: var(--surface);
+        border: 1px solid var(--border); border-top: none;
+        border-radius: 0 0 var(--radius) var(--radius);
+        padding: 1rem 1.25rem;
+    }
+    .login-wall {
+        display: flex; align-items: center; justify-content: center;
+        gap: 1rem; flex-wrap: wrap; padding: .5rem 0;
+    }
+    .login-wall p { color: var(--muted); font-size: .9rem; }
+    .input-row { display: flex; align-items: flex-end; gap: .75rem; }
+    #message-input {
+        flex: 1; background: var(--bg); border: 1.5px solid var(--border);
+        border-radius: 12px; color: var(--text); font-family: inherit;
+        font-size: .95rem; padding: .75rem 1rem; resize: none; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+        line-height: 1.4; max-height: 120px; min-height: 46px;
+    }
+    #message-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,.18); }
+    #message-input::placeholder { color: var(--muted); }
+    #send-button {
+        width: 46px; height: 46px; border-radius: 12px;
+        background: var(--accent); border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; transition: background .2s, transform .15s;
+        color: #fff; font-size: 1.15rem;
+    }
+    #send-button:hover   { background: #5a52d5; }
+    #send-button:active  { transform: scale(.93); }
+    #send-button:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── TYPING + TOAST ── */
+    .typing-row { height: 20px; display:flex; align-items:center; padding:0 .25rem; margin-bottom:.4rem; }
+    #typing-indicator { font-size:.75rem; color:var(--muted); display:none; }
+    #conn-toast {
+        position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+        background: #2d3748; color: var(--text); padding: .6rem 1.2rem;
+        border-radius: 20px; font-size: .82rem; font-weight: 500;
+        display: none; z-index: 999; box-shadow: var(--shadow);
+    }
+    #json-username, #json-chatroomname { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ user.username|json_script:"json-username" }}
+{{ room.slug|json_script:"json-chatroomname" }}
+
+<div class="chat-layout">
+
+    <!-- HEADER -->
+    <div class="chat-header">
+        <div class="chat-header-left">
+            <div class="room-avatar">💬</div>
+            <div class="room-info">
+                <div class="room-title">{{ room.name }}</div>
+                <div class="room-sub">
+                    <span class="status-dot" id="ws-dot" style="background:#fc8181;"></span>
+                    <span id="ws-status">Connecting…</span>
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'index' %}" class="back-link">← All Rooms</a>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="chat-messages" id="chat-messages">
+        <div class="day-divider">Message history</div>
+
+        {% for msg in messages %}
+        <div class="msg-wrap {% if msg.user == request.user %}own{% endif %}" id="msg-{{ msg.pk }}">
+            <div class="msg-avatar">{{ msg.user.username|first|upper }}</div>
+            <div>
+                <div class="msg-meta">
+                    <span class="msg-username">{{ msg.user.username }}</span>
+                    <span class="msg-time">{{ msg.date|localtime|date:"H:i" }}</span>
+                </div>
+                <div class="msg-bubble">{{ msg.message }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center;color:var(--muted);font-size:.9rem;margin:auto;">
+            🎉 No messages yet. Be the first to say hello!
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- INPUT -->
+    <div class="chat-input-area">
+        <div class="typing-row">
+            <span id="typing-indicator">✍️ Someone is typing…</span>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="input-row">
+            <textarea
+                id="message-input"
+                placeholder="Type a message… (Enter to send)"
+                rows="1"
+                autocomplete="off"
+            ></textarea>
+            <button id="send-button" title="Send" disabled>&#9658;</button>
+        </div>
+        {% else %}
+        <div class="login-wall">
+            <p>Login to send messages</p>
+            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-outline">Register</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="conn-toast"></div>
+
+{% if user.is_authenticated %}
+<script>
+(function () {
+    const username     = JSON.parse(document.getElementById('json-username').textContent);
+    const chatRoomName = JSON.parse(document.getElementById('json-chatroomname').textContent);
+
+    const msgBox   = document.getElementById('chat-messages');
+    const input    = document.getElementById('message-input');
+    const sendBtn  = document.getElementById('send-button');
+    const wsStatus = document.getElementById('ws-status');
+    const wsDot    = document.getElementById('ws-dot');
+    const toast    = document.getElementById('conn-toast');
+
+    function scrollBottom() { msgBox.scrollTop = msgBox.scrollHeight; }
+    scrollBottom();
+
+    function showToast(msg, duration) {
+        toast.textContent = msg;
+        toast.style.display = 'block';
+        clearTimeout(toast._t);
+        toast._t = setTimeout(function () { toast.style.display = 'none'; }, duration || 3000);
+    }
+
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function buildBubble(message, sender, isMine) {
+        var wrap = document.createElement('div');
+        wrap.className = 'msg-wrap' + (isMine ? ' own' : '');
+        var initial = sender.charAt(0).toUpperCase();
+        var now  = new Date();
+        var time = now.toTimeString().slice(0, 5);
+        wrap.innerHTML =
+            '<div class="msg-avatar">' + initial + '</div>' +
+            '<div>' +
+              '<div class="msg-meta">' +
+                '<span class="msg-username">' + sender + '</span>' +
+                '<span class="msg-time">' + time + '</span>' +
+              '</div>' +
+              '<div class="msg-bubble">' + escapeHtml(message) + '</div>' +
+            '</div>';
+        return wrap;
+    }
+
+    // Auto-resize textarea
+    input.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        sendBtn.disabled = !this.value.trim();
+    });
+
+    // WebSocket with reconnect
+    var ws;
+    var reconnectDelay = 1000;
+
+    function connect() {
+        var protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(protocol + '://' + window.location.host + '/ws/' + chatRoomName + '/');
+
+        ws.onopen = function () {
+            wsStatus.textContent   = 'Connected';
+            wsDot.style.background = '#68d391';
+            sendBtn.disabled       = !input.value.trim();
+            reconnectDelay         = 1000;
+        };
+
+        ws.onmessage = function (e) {
+            var data = JSON.parse(e.data);
+            if (!data.message) return;
+            var isMine = data.username === username;
+            msgBox.appendChild(buildBubble(data.message, data.username, isMine));
+            scrollBottom();
+        };
+
+        ws.onclose = function () {
+            wsStatus.textContent   = 'Disconnected — retrying…';
+            wsDot.style.background = '#fc8181';
+            sendBtn.disabled       = true;
+            showToast('⚠️ Connection lost. Reconnecting…', 4000);
+            setTimeout(function () {
+                reconnectDelay = Math.min(reconnectDelay * 2, 16000);
+                connect();
+            }, reconnectDelay);
+        };
+
+        ws.onerror = function () { ws.close(); };
+    }
+
+    connect();
+
+    function sendMessage() {
+        var msg = input.value.trim();
+        if (!msg || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({
+            message:      msg,
+            username:     username,
+            chatRoomName: chatRoomName,
+        }));
+        input.value       = '';
+        input.style.height = 'auto';
+        sendBtn.disabled  = true;
+        input.focus();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+})();
+</script>
+{% endif %}
+
+{% endblock %}
